@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>שעון דיגיטלי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --hill-far: #8fc49a;
+    --hill-mid: #5fa86e;
+    --hill-near: #3d8a4f;
+    --text: #ffffff;
+    --shadow: rgba(0, 0, 0, .35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: "Rubik", system-ui, sans-serif;
+    background: #0b1530;
+    color: var(--text);
+  }
+
+  /* ---------- שמיים: ארבע שכבות שמתחלפות בדעיכה ---------- */
+  .sky { position: fixed; inset: 0; opacity: 0; transition: opacity 3s ease; }
+  .sky.morning { background: linear-gradient(to bottom, #6fb7ea 0%, #a9d8f2 45%, #ffd8a8 80%, #ffc28a 100%); }
+  .sky.noon    { background: linear-gradient(to bottom, #1f7fd6 0%, #4fa6ec 50%, #a9dcff 100%); }
+  .sky.evening { background: linear-gradient(to bottom, #2a1b52 0%, #7a3a7a 35%, #e0605a 70%, #ffb366 100%); }
+  .sky.night   { background: linear-gradient(to bottom, #02040f 0%, #0a1433 55%, #1d2b5c 100%); }
+  body[data-phase="morning"] .sky.morning,
+  body[data-phase="noon"]    .sky.noon,
+  body[data-phase="evening"] .sky.evening,
+  body[data-phase="night"]   .sky.night { opacity: 1; }
+
+  /* ---------- כוכבים ---------- */
+  .stars { position: fixed; inset: 0; opacity: 0; transition: opacity 3s ease; pointer-events: none; }
+  body[data-phase="evening"] .stars { opacity: .45; }
+  body[data-phase="night"] .stars { opacity: 1; }
+  .star {
+    position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff;
+    animation: twinkle var(--d) ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { from { opacity: .2; } to { opacity: 1; } }
+
+  /* ---------- שמש וירח ---------- */
+  .orb {
+    position: fixed; width: 14vmin; height: 14vmin; border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: left 2s linear, top 2s linear, opacity 3s ease;
+    pointer-events: none;
+  }
+  .sun {
+    background: radial-gradient(circle, #fffbe0 0%, #ffe066 45%, #ffb703 100%);
+    box-shadow: 0 0 6vmin 2vmin rgba(255, 210, 80, .6), 0 0 18vmin 8vmin rgba(255, 200, 80, .25);
+    animation: pulse 4s ease-in-out infinite;
+  }
+  body[data-phase="evening"] .sun {
+    background: radial-gradient(circle, #ffe2b0 0%, #ff9a4d 55%, #ff5e3a 100%);
+    box-shadow: 0 0 8vmin 3vmin rgba(255, 120, 60, .55);
+  }
+  .moon {
+    width: 10vmin; height: 10vmin;
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e8ecf5 50%, #c3c9d9 100%);
+    box-shadow: 0 0 6vmin 1vmin rgba(220, 230, 255, .35);
+  }
+  .moon::before, .moon::after {
+    content: ""; position: absolute; border-radius: 50%; background: rgba(150, 160, 185, .35);
+  }
+  .moon::before { width: 22%; height: 22%; top: 25%; left: 55%; }
+  .moon::after  { width: 14%; height: 14%; top: 60%; left: 30%; }
+  @keyframes pulse { 50% { transform: translate(-50%, -50%) scale(1.05); } }
+
+  /* ---------- עננים ---------- */
+  .cloud {
+    position: fixed; left: -30vw; pointer-events: none;
+    width: var(--w); height: calc(var(--w) * .32);
+    background: #fff; opacity: .9;
+    border-radius: 999px;
+    filter: blur(1px);
+    animation: drift var(--t) linear infinite;
+    animation-delay: var(--delay);
+    transition: background 3s ease, opacity 3s ease;
+  }
+  .cloud::before, .cloud::after {
+    content: ""; position: absolute; background: inherit; border-radius: 50%;
+  }
+  .cloud::before { width: 45%; height: 140%; left: 15%; top: -70%; }
+  .cloud::after  { width: 35%; height: 110%; left: 50%; top: -45%; }
+  @keyframes drift { to { transform: translateX(140vw); } }
+  body[data-phase="evening"] .cloud { background: #ffc4b0; opacity: .55; }
+  body[data-phase="night"] .cloud   { background: #7887af; opacity: .25; }
+
+  /* ---------- ציפורים (בוקר) ---------- */
+  .birds { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 3s ease; }
+  body[data-phase="morning"] .birds { opacity: 1; }
+  body[data-phase="noon"] .birds { opacity: .5; }
+  .bird {
+    position: absolute; left: -10vw; width: 3vmin; height: 1.5vmin;
+    animation: fly var(--t) linear infinite; animation-delay: var(--delay);
+  }
+  .bird svg { width: 100%; height: 100%; overflow: visible; animation: flap .5s ease-in-out infinite alternate; }
+  @keyframes fly {
+    0%   { transform: translate(0, 0); }
+    50%  { transform: translate(60vw, -4vh); }
+    100% { transform: translate(120vw, 2vh); }
+  }
+  @keyframes flap { to { transform: scaleY(.4); } }
+
+  /* ---------- גבעות ---------- */
+  .hills { position: fixed; bottom: 0; left: 0; width: 100%; height: 38vh; pointer-events: none; }
+  .hills path { transition: fill 3s ease; }
+  .far  { fill: var(--hill-far); }
+  .mid  { fill: var(--hill-mid); }
+  .near { fill: var(--hill-near); }
+  body[data-phase="morning"] { --hill-far: #9fcfa3; --hill-mid: #6db27a; --hill-near: #4a9558; }
+  body[data-phase="noon"]    { --hill-far: #8cc88f; --hill-mid: #57a865; --hill-near: #358a47; }
+  body[data-phase="evening"] { --hill-far: #8a4f6e; --hill-mid: #5c3458; --hill-near: #3a2240; }
+  body[data-phase="night"]   { --hill-far: #1e2b4d; --hill-mid: #141e38; --hill-near: #0b1226; }
+
+  /* ---------- השעון ---------- */
+  .clock {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1.5vh;
+    padding: 0 16px 18vh; text-align: center;
+    text-shadow: 0 4px 24px var(--shadow);
+  }
+  .greeting { font-size: clamp(1.4rem, 4vw, 2.6rem); font-weight: 400; opacity: .95; }
+  .time {
+    direction: ltr;
+    font-size: clamp(4.5rem, 19vw, 15rem); font-weight: 300; line-height: 1;
+    font-variant-numeric: tabular-nums; letter-spacing: .02em;
+  }
+  .time .colon { animation: blink 1s steps(1) infinite; }
+  .time .sec { font-size: .38em; opacity: .8; margin-inline-start: .15em; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .date { font-size: clamp(1.1rem, 3vw, 1.9rem); font-weight: 400; opacity: .9; }
+
+  /* ---------- מחוון חלק היום ---------- */
+  .phases {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; padding: 6px; border-radius: 999px;
+    background: rgba(0, 0, 0, .25); backdrop-filter: blur(6px);
+    list-style: none; user-select: none;
+  }
+  .phases li {
+    font-size: .9rem; padding: 6px 14px; border-radius: 999px;
+    opacity: .6; transition: background .6s ease, opacity .6s ease;
+  }
+  body[data-phase="morning"] .phases [data-p="morning"],
+  body[data-phase="noon"]    .phases [data-p="noon"],
+  body[data-phase="evening"] .phases [data-p="evening"],
+  body[data-phase="night"]   .phases [data-p="night"] {
+    background: rgba(255, 255, 255, .3); opacity: 1; font-weight: 600;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; }
+  }
+</style>
+</head>
+<body data-phase="morning">
+  <div class="sky morning"></div>
+  <div class="sky noon"></div>
+  <div class="sky evening"></div>
+  <div class="sky night"></div>
+
+  <div class="stars" id="stars"></div>
+  <div class="orb sun" id="sun"></div>
+  <div class="orb moon" id="moon"></div>
+
+  <div class="cloud" style="--w:22vw; top:12vh; --t:90s;  --delay:-20s"></div>
+  <div class="cloud" style="--w:14vw; top:24vh; --t:70s;  --delay:-55s"></div>
+  <div class="cloud" style="--w:28vw; top:6vh;  --t:120s; --delay:-80s"></div>
+  <div class="cloud" style="--w:12vw; top:32vh; --t:60s;  --delay:-10s"></div>
+
+  <div class="birds" id="birds"></div>
+
+  <svg class="hills" viewBox="0 0 1440 400" preserveAspectRatio="none" aria-hidden="true">
+    <path class="far"  d="M0,180 C200,110 380,150 560,120 C760,85 940,160 1120,120 C1280,90 1380,130 1440,120 L1440,400 L0,400 Z"/>
+    <path class="mid"  d="M0,250 C160,190 320,230 520,200 C720,170 880,250 1080,215 C1240,190 1360,220 1440,205 L1440,400 L0,400 Z"/>
+    <path class="near" d="M0,320 C220,270 420,310 640,285 C860,260 1040,330 1260,300 C1350,288 1410,295 1440,292 L1440,400 L0,400 Z"/>
+  </svg>
+
+  <main class="clock">
+    <div class="greeting" id="greeting"></div>
+    <div class="time" id="time"></div>
+    <div class="date" id="date"></div>
+  </main>
+
+  <ul class="phases" aria-label="חלק היום">
+    <li data-p="morning">בוקר</li>
+    <li data-p="noon">צהריים</li>
+    <li data-p="evening">ערב</li>
+    <li data-p="night">לילה</li>
+  </ul>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const GREETINGS = { morning: "בוקר טוב ☀️", noon: "צהריים טובים 🌤️", evening: "ערב טוב 🌇", night: "לילה טוב 🌙" };
+
+  // יצירת כוכבים
+  for (let i = 0; i < 140; i++) {
+    const s = document.createElement("div");
+    s.className = "star";
+    const size = Math.random() < .15 ? 3 : 2;
+    s.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 65}%;width:${size}px;height:${size}px;--d:${1.5 + Math.random() * 3}s;animation-delay:${-Math.random() * 4}s`;
+    $("stars").appendChild(s);
+  }
+
+  // יצירת ציפורים
+  for (let i = 0; i < 5; i++) {
+    const b = document.createElement("div");
+    b.className = "bird";
+    b.style.cssText = `top:${10 + Math.random() * 25}vh;--t:${22 + Math.random() * 14}s;--delay:${-Math.random() * 30}s`;
+    b.innerHTML = '<svg viewBox="0 0 20 10"><path d="M0,2 Q5,9 10,5 Q15,9 20,2" fill="none" stroke="#2b3440" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    $("birds").appendChild(b);
+  }
+
+  function phaseFor(h) {
+    if (h >= 5 && h < 12) return "morning";
+    if (h >= 12 && h < 17) return "noon";
+    if (h >= 17 && h < 20.5) return "evening";
+    return "night";
+  }
+
+  // מיקום על קשת: t=0 שמאל-אופק, t=1 ימין-אופק
+  function arc(t) {
+    const x = 8 + t * 84;
+    const y = 72 - Math.sin(t * Math.PI) * 58;
+    return [x, y];
+  }
+
+  function placeOrbs(h) {
+    const sun = $("sun"), moon = $("moon");
+    // שמש: 5:30 עד 19:30
+    const ts = (h - 5.5) / 14;
+    if (ts >= 0 && ts <= 1) {
+      const [x, y] = arc(ts);
+      sun.style.left = x + "%"; sun.style.top = y + "%"; sun.style.opacity = 1;
+    } else sun.style.opacity = 0;
+    // ירח: 19:00 עד 6:00
+    const tm = ((h - 19 + 24) % 24) / 11;
+    if (tm >= 0 && tm <= 1) {
+      const [x, y] = arc(tm);
+      moon.style.left = x + "%"; moon.style.top = y + "%"; moon.style.opacity = 1;
+    } else moon.style.opacity = 0;
+  }
+
+  const pad = n => String(n).padStart(2, "0");
+  const dateFmt = new Intl.DateTimeFormat("he-IL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  function tick() {
+    const now = new Date();
+    $("time").innerHTML =
+      `${pad(now.getHours())}<span class="colon">:</span>${pad(now.getMinutes())}<span class="sec">${pad(now.getSeconds())}</span>`;
+    $("date").textContent = dateFmt.format(now);
+
+    const h = now.getHours() + now.getMinutes() / 60;
+    const phase = phaseFor(h);
+    if (document.body.dataset.phase !== phase) document.body.dataset.phase = phase;
+    $("greeting").textContent = GREETINGS[phase];
+    placeOrbs(h);
+  }
+
+  tick();
+  setInterval(tick, 1000);
+</script>
+</body>
+</html>
